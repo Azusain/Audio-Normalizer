@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
         
         return 0;
         
-    } catch (const cxxopts::OptionException& e) {
+    } catch (const cxxopts::exceptions::exception& e) {
         SPDLOG_ERROR("Command line parsing error: {}", e.what());
         return 1;
     } catch (const std::exception& e) {
