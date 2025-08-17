@@ -174,18 +174,21 @@ bool AudioNormalizer::normalizeLufs(const std::string& inputPath,
     // Apply gain
     applyGain(audioData.data(), framesRead, inputInfo.channels, gainLinear);
     
-    // Create output file with high-quality format
+    // Create output file - keep original format unless specifically converting
     SF_INFO outputInfo = inputInfo;  // Copy input file info
     
-    // Force high-quality output format to avoid compression artifacts
-    // For lossy input formats (MP3), output as WAV to maintain quality
+    // Only override format if we're explicitly changing extension (MP3 -> WAV)
+    std::string inputPathStr = inputPath;
     std::string outputPathStr = outputPath;
-    if (outputPathStr.find(".mp3") != std::string::npos ||
-        outputPathStr.find(".MP3") != std::string::npos) {
-        // For MP3 output, use high bitrate MP3 or consider WAV
-        outputInfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
-        SPDLOG_DEBUG("Converting MP3 output to WAV format to preserve quality");
+    bool isMp3Input = (inputPathStr.find(".mp3") != std::string::npos || inputPathStr.find(".MP3") != std::string::npos);
+    bool isWavOutput = (outputPathStr.find(".wav") != std::string::npos || outputPathStr.find(".WAV") != std::string::npos);
+    
+    if (isMp3Input && isWavOutput) {
+        // Converting MP3 to WAV - use standard 16-bit PCM
+        outputInfo.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+        SPDLOG_DEBUG("Converting MP3 to standard 16-bit WAV");
     }
+    // Otherwise keep the original format
     
     SNDFILE* outputFile = sf_open(outputPath.c_str(), SFM_WRITE, &outputInfo);
     if (!outputFile) {
@@ -194,8 +197,14 @@ bool AudioNormalizer::normalizeLufs(const std::string& inputPath,
         return false;
     }
     
-    // Write audio data
-    sf_count_t framesWritten = sf_writef_double(outputFile, audioData.data(), framesRead);
+    // Write audio data using appropriate format
+    sf_count_t framesWritten;
+    if ((outputInfo.format & SF_FORMAT_SUBMASK) == SF_FORMAT_PCM_16) {
+        // For 24-bit output, still use double precision internally but libsndfile handles conversion
+        framesWritten = sf_writef_double(outputFile, audioData.data(), framesRead);
+    } else {
+        framesWritten = sf_writef_double(outputFile, audioData.data(), framesRead);
+    }
     if (framesWritten != framesRead) {
         SPDLOG_WARN("Wrote {} frames, expected {}", framesWritten, framesRead);
     }
@@ -256,18 +265,21 @@ bool AudioNormalizer::normalizeAudio(const std::string& inputPath,
     // Apply gain
     applyGain(audioData.data(), framesRead, inputInfo.channels, gainLinear);
     
-    // Create output file with high-quality format  
+    // Create output file - keep original format unless specifically converting
     SF_INFO outputInfo = inputInfo;  // Copy input file info
     
-    // Force high-quality output format to avoid compression artifacts
-    // For lossy input formats (MP3), output as WAV to maintain quality
+    // Only override format if we're explicitly changing extension (MP3 -> WAV)
+    std::string inputPathStr = inputPath;
     std::string outputPathStr = outputPath;
-    if (outputPathStr.find(".mp3") != std::string::npos ||
-        outputPathStr.find(".MP3") != std::string::npos) {
-        // For MP3 output, use high bitrate MP3 or consider WAV
-        outputInfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
-        SPDLOG_DEBUG("Converting MP3 output to WAV format to preserve quality");
+    bool isMp3Input = (inputPathStr.find(".mp3") != std::string::npos || inputPathStr.find(".MP3") != std::string::npos);
+    bool isWavOutput = (outputPathStr.find(".wav") != std::string::npos || outputPathStr.find(".WAV") != std::string::npos);
+    
+    if (isMp3Input && isWavOutput) {
+        // Converting MP3 to WAV - use standard 16-bit PCM
+        outputInfo.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+        SPDLOG_DEBUG("Converting MP3 to standard 16-bit WAV");
     }
+    // Otherwise keep the original format
     
     SNDFILE* outputFile = sf_open(outputPath.c_str(), SFM_WRITE, &outputInfo);
     if (!outputFile) {
@@ -276,8 +288,14 @@ bool AudioNormalizer::normalizeAudio(const std::string& inputPath,
         return false;
     }
     
-    // Write audio data
-    sf_count_t framesWritten = sf_writef_double(outputFile, audioData.data(), framesRead);
+    // Write audio data using appropriate format
+    sf_count_t framesWritten;
+    if ((outputInfo.format & SF_FORMAT_SUBMASK) == SF_FORMAT_PCM_16) {
+        // For 24-bit output, still use double precision internally but libsndfile handles conversion
+        framesWritten = sf_writef_double(outputFile, audioData.data(), framesRead);
+    } else {
+        framesWritten = sf_writef_double(outputFile, audioData.data(), framesRead);
+    }
     if (framesWritten != framesRead) {
         SPDLOG_WARN("Wrote {} frames, expected {}", framesWritten, framesRead);
     }
