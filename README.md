@@ -6,7 +6,7 @@ A command-line tool for audio peak normalization. Adjusts audio files to a targe
 
 1. Install dependencies with vcpkg:
    ```bash
-   vcpkg install libsndfile spdlog cxxopts
+   vcpkg install libsndfile spdlog cxxopts pkgconf
    ```
 
 2. Build:

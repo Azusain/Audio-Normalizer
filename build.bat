@@ -9,7 +9,7 @@ if not defined TOOLCHAIN if exist C:\vcpkg\scripts\buildsystems\vcpkg.cmake set 
 
 if not defined TOOLCHAIN (
     echo Error: vcpkg not found
-    echo Install vcpkg and run: vcpkg install libsndfile spdlog cxxopts
+    echo Install vcpkg and run: vcpkg install libsndfile spdlog cxxopts pkgconf
     exit /b 1
 )
 
