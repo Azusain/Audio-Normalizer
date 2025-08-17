@@ -174,8 +174,19 @@ bool AudioNormalizer::normalizeLufs(const std::string& inputPath,
     // Apply gain
     applyGain(audioData.data(), framesRead, inputInfo.channels, gainLinear);
     
-    // Create output file
+    // Create output file with high-quality format
     SF_INFO outputInfo = inputInfo;  // Copy input file info
+    
+    // Force high-quality output format to avoid compression artifacts
+    // For lossy input formats (MP3), output as WAV to maintain quality
+    std::string outputPathStr = outputPath;
+    if (outputPathStr.find(".mp3") != std::string::npos ||
+        outputPathStr.find(".MP3") != std::string::npos) {
+        // For MP3 output, use high bitrate MP3 or consider WAV
+        outputInfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+        SPDLOG_DEBUG("Converting MP3 output to WAV format to preserve quality");
+    }
+    
     SNDFILE* outputFile = sf_open(outputPath.c_str(), SFM_WRITE, &outputInfo);
     if (!outputFile) {
         SPDLOG_ERROR("Cannot create output file: {}", outputPath);
@@ -245,8 +256,19 @@ bool AudioNormalizer::normalizeAudio(const std::string& inputPath,
     // Apply gain
     applyGain(audioData.data(), framesRead, inputInfo.channels, gainLinear);
     
-    // Create output file
+    // Create output file with high-quality format  
     SF_INFO outputInfo = inputInfo;  // Copy input file info
+    
+    // Force high-quality output format to avoid compression artifacts
+    // For lossy input formats (MP3), output as WAV to maintain quality
+    std::string outputPathStr = outputPath;
+    if (outputPathStr.find(".mp3") != std::string::npos ||
+        outputPathStr.find(".MP3") != std::string::npos) {
+        // For MP3 output, use high bitrate MP3 or consider WAV
+        outputInfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
+        SPDLOG_DEBUG("Converting MP3 output to WAV format to preserve quality");
+    }
+    
     SNDFILE* outputFile = sf_open(outputPath.c_str(), SFM_WRITE, &outputInfo);
     if (!outputFile) {
         SPDLOG_ERROR("Cannot create output file: {}", outputPath);
