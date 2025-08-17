@@ -2,32 +2,23 @@
 if not exist build mkdir build
 cd build
 
-REM Try common vcpkg locations
-if exist "C:\vcpkg\scripts\buildsystems\vcpkg.cmake" (
-    set "VCPKG_TOOLCHAIN=C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
-) else if exist "C:\tools\vcpkg\scripts\buildsystems\vcpkg.cmake" (
-    set "VCPKG_TOOLCHAIN=C:\tools\vcpkg\scripts\buildsystems\vcpkg.cmake"
-) else if defined VCPKG_ROOT (
-    set "VCPKG_TOOLCHAIN=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake"
-) else (
-    echo Error: vcpkg not found. Install vcpkg and run:
-    echo   vcpkg install libsndfile spdlog cxxopts
-    pause
+REM Find vcpkg
+set TOOLCHAIN=
+if defined VCPKG_ROOT set TOOLCHAIN=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
+if not defined TOOLCHAIN if exist C:\vcpkg\scripts\buildsystems\vcpkg.cmake set TOOLCHAIN=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
+
+if not defined TOOLCHAIN (
+    echo Error: vcpkg not found
+    echo Install vcpkg and run: vcpkg install libsndfile spdlog cxxopts
     exit /b 1
 )
 
-cmake .. -DCMAKE_TOOLCHAIN_FILE="%VCPKG_TOOLCHAIN%" -DCMAKE_BUILD_TYPE=Release
-if %ERRORLEVEL% neq 0 (
-    echo Build failed. Make sure dependencies are installed:
-    echo   vcpkg install libsndfile spdlog cxxopts
-    pause
-    exit /b 1
-)
+echo Configuring...
+cmake .. -DCMAKE_TOOLCHAIN_FILE="%TOOLCHAIN%"
+if errorlevel 1 exit /b 1
 
+echo Building...
 cmake --build . --config Release
-if %ERRORLEVEL% neq 0 (
-    pause
-    exit /b 1
-)
+if errorlevel 1 exit /b 1
 
-echo Build complete!
+echo Done!
