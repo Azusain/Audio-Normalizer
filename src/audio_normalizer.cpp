@@ -177,16 +177,21 @@ bool AudioNormalizer::normalizeLufs(const std::string& inputPath,
     // Create output file - keep original format unless specifically converting
     SF_INFO outputInfo = inputInfo;  // Copy input file info
     
-    // Only override format if we're explicitly changing extension (MP3 -> WAV)
+    // Only override format if we're explicitly changing extension (MP3 -> WAV/FLAC)
     std::string inputPathStr = inputPath;
     std::string outputPathStr = outputPath;
     bool isMp3Input = (inputPathStr.find(".mp3") != std::string::npos || inputPathStr.find(".MP3") != std::string::npos);
     bool isWavOutput = (outputPathStr.find(".wav") != std::string::npos || outputPathStr.find(".WAV") != std::string::npos);
+    bool isFlacOutput = (outputPathStr.find(".flac") != std::string::npos || outputPathStr.find(".FLAC") != std::string::npos);
     
     if (isMp3Input && isWavOutput) {
         // Converting MP3 to WAV - use standard 16-bit PCM
         outputInfo.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
         SPDLOG_DEBUG("Converting MP3 to standard 16-bit WAV");
+    } else if (isMp3Input && isFlacOutput) {
+        // Converting MP3 to FLAC - use 16-bit for smaller size
+        outputInfo.format = SF_FORMAT_FLAC | SF_FORMAT_PCM_16;
+        SPDLOG_DEBUG("Converting MP3 to FLAC for smaller lossless output");
     }
     // Otherwise keep the original format
     
@@ -268,16 +273,21 @@ bool AudioNormalizer::normalizeAudio(const std::string& inputPath,
     // Create output file - keep original format unless specifically converting
     SF_INFO outputInfo = inputInfo;  // Copy input file info
     
-    // Only override format if we're explicitly changing extension (MP3 -> WAV)
+    // Only override format if we're explicitly changing extension (MP3 -> WAV/FLAC)
     std::string inputPathStr = inputPath;
     std::string outputPathStr = outputPath;
     bool isMp3Input = (inputPathStr.find(".mp3") != std::string::npos || inputPathStr.find(".MP3") != std::string::npos);
     bool isWavOutput = (outputPathStr.find(".wav") != std::string::npos || outputPathStr.find(".WAV") != std::string::npos);
+    bool isFlacOutput = (outputPathStr.find(".flac") != std::string::npos || outputPathStr.find(".FLAC") != std::string::npos);
     
     if (isMp3Input && isWavOutput) {
         // Converting MP3 to WAV - use standard 16-bit PCM
         outputInfo.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
         SPDLOG_DEBUG("Converting MP3 to standard 16-bit WAV");
+    } else if (isMp3Input && isFlacOutput) {
+        // Converting MP3 to FLAC - use 16-bit for smaller size
+        outputInfo.format = SF_FORMAT_FLAC | SF_FORMAT_PCM_16;
+        SPDLOG_DEBUG("Converting MP3 to FLAC for smaller lossless output");
     }
     // Otherwise keep the original format
     
