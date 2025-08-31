@@ -1,0 +1,22 @@
+[package]
+name = "audio_normalizer"
+version = "2.0.0"
+edition = "2021"
+authors = ["Azusain <azusain@example.com>"]
+description = "A command-line tool for audio normalization with fade effects. Supports both peak level normalization and LUFS normalization."
+license = "MIT"
+
+[[bin]]
+name = "audio_normalizer"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+hound = "3.5"
+ebur128 = "0.1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tracing-appender = "0.2"
+anyhow = "1.0"
+thiserror = "1.0"
+rayon = "1.8"

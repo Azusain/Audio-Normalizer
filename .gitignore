@@ -57,3 +57,8 @@ test_audio/
 # Backup files
 *.bak
 *.orig
+
+
+# Added by cargo
+
+/target
