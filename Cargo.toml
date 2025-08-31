@@ -25,5 +25,5 @@ symphonia = { version = "0.5", features = ["all"] }
 rubato = "0.14"
 # MP3 encoding
 lame = "0.1"
-# Optional: FLAC encoding
-claxon = "0.4"
+# FLAC encoding using libflac
+flacenc = "0.4"

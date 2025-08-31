@@ -4,9 +4,9 @@ mod normalizer;
 mod multi_format_processor;
 
 use anyhow::Result;
-use clap::{Args, Parser, Subcommand};
+use clap::Parser;
 use std::path::PathBuf;
-use tracing::{error, info, debug};
+use tracing::{info, debug};
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*};
 
 #[derive(Parser)]
@@ -16,6 +16,14 @@ use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*};
     version = "2.0.0"
 )]
 struct Cli {
+    /// Input audio file
+    #[arg(value_name = "INPUT")]
+    input: PathBuf,
+
+    /// Output audio file (optional - if not provided, will only analyze)
+    #[arg(value_name = "OUTPUT")]
+    output: Option<PathBuf>,
+
     /// Enable verbose output (debug level logging)
     #[arg(short, long)]
     verbose: bool,
@@ -24,63 +32,15 @@ struct Cli {
     #[arg(short, long)]
     quiet: bool,
 
-    #[command(subcommand)]
-    command: Option<Commands>,
+    /// Only analyze peak level (no normalization)
+    #[arg(long = "peak-only")]
+    peak_only: bool,
 
-    /// Input audio file
-    #[arg(value_name = "INPUT")]
-    input: Option<PathBuf>,
+    /// Only analyze LUFS level (no normalization)
+    #[arg(long = "lufs-only")]
+    lufs_only: bool,
 
-    /// Output audio file
-    #[arg(value_name = "OUTPUT")]
-    output: Option<PathBuf>,
-
-    /// Target peak level in dB (default: -12.0)
-    #[arg(short = 'm', long = "max-peak", default_value = "-12.0")]
-    max_peak: f64,
-
-    /// Target LUFS level for loudness normalization
-    #[arg(short = 'l', long = "lufs")]
-    lufs: Option<f64>,
-
-    /// Fade in duration in seconds
-    #[arg(long = "fade-in", default_value = "0.0")]
-    fade_in: f64,
-
-    /// Fade out duration in seconds
-    #[arg(long = "fade-out", default_value = "0.0")]
-    fade_out: f64,
-
-    /// Fade curve type (linear, exponential, logarithmic)
-    #[arg(long = "fade-curve", default_value = "linear")]
-    fade_curve: String,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// Only show peak level of input file (no normalization)
-    Peak {
-        /// Input audio file to analyze
-        input: PathBuf,
-    },
-    /// Only show LUFS level of input file (no normalization)
-    MeasureLufs {
-        /// Input audio file to analyze
-        input: PathBuf,
-    },
-    /// Normalize audio with optional fade effects
-    Normalize(NormalizeArgs),
-}
-
-#[derive(Args)]
-struct NormalizeArgs {
-    /// Input audio file
-    input: PathBuf,
-    
-    /// Output audio file
-    output: PathBuf,
-    
-    /// Target peak level in dB (default: -12.0)
+    /// Target peak level in dB
     #[arg(short = 'm', long = "max-peak", default_value = "-12.0")]
     max_peak: f64,
 
@@ -107,7 +67,7 @@ fn setup_logging(verbose: bool, quiet: bool) {
     } else if quiet {
         LevelFilter::ERROR
     } else {
-        LevelFilter::INFO
+        LevelFilter::INFO // Change back to INFO so we can see processing messages
     };
 
     tracing_subscriber::registry()
@@ -128,53 +88,41 @@ fn main() -> Result<()> {
 
     debug!("Audio Normalizer v2.0.0");
 
-    match cli.command {
-        Some(Commands::Peak { input }) => {
-            info!("Analyzing peak level of: {}", input.display());
-            let peak_db = multi_format_processor::MultiFormatProcessor::get_peak_level(&input)?;
-            info!("Peak level: {:.2} dB", peak_db);
-        }
-        Some(Commands::MeasureLufs { input }) => {
-            info!("Analyzing LUFS level of: {}", input.display());
-            let lufs_level = multi_format_processor::MultiFormatProcessor::get_lufs_level(&input)?;
-            info!("LUFS level: {:.2} LUFS", lufs_level);
-        }
-        Some(Commands::Normalize(args)) => {
+    // Peak analysis only
+    if cli.peak_only {
+        info!("Analyzing peak level of: {}", cli.input.display());
+        let peak_db = multi_format_processor::MultiFormatProcessor::get_peak_level(&cli.input)?;
+        println!("Peak level: {:.2} dB", peak_db);
+        return Ok(());
+    }
+
+    // LUFS analysis only
+    if cli.lufs_only {
+        info!("Analyzing LUFS level of: {}", cli.input.display());
+        let lufs_level = multi_format_processor::MultiFormatProcessor::get_lufs_level(&cli.input)?;
+        println!("LUFS level: {:.2} LUFS", lufs_level);
+        return Ok(());
+    }
+
+    // Normalization or simple analysis
+    match cli.output {
+        Some(output) => {
+            // Normalize audio
             process_normalization(
-                &args.input,
-                &args.output,
-                args.max_peak,
-                args.lufs,
-                args.fade_in,
-                args.fade_out,
-                &args.fade_curve,
+                &cli.input,
+                &output,
+                cli.max_peak,
+                cli.lufs,
+                cli.fade_in,
+                cli.fade_out,
+                &cli.fade_curve,
             )?;
         }
         None => {
-            // Handle legacy command-line format
-            match (cli.input, cli.output) {
-                (Some(input), Some(output)) => {
-                    process_normalization(
-                        &input,
-                        &output,
-                        cli.max_peak,
-                        cli.lufs,
-                        cli.fade_in,
-                        cli.fade_out,
-                        &cli.fade_curve,
-                    )?;
-                }
-                (Some(input), None) => {
-                    // Default to peak analysis
-                    info!("Analyzing peak level of: {}", input.display());
-                    let peak_db = multi_format_processor::MultiFormatProcessor::get_peak_level(&input)?;
-                    info!("Peak level: {:.2} dB", peak_db);
-                }
-                _ => {
-                    error!("Input file is required");
-                    std::process::exit(1);
-                }
-            }
+            // Just analyze peak level
+            info!("Analyzing peak level of: {}", cli.input.display());
+            let peak_db = multi_format_processor::MultiFormatProcessor::get_peak_level(&cli.input)?;
+            println!("Peak level: {:.2} dB", peak_db);
         }
     }
 
@@ -196,17 +144,17 @@ fn process_normalization(
     if let Some(target_lufs) = lufs {
         debug!("Target LUFS level: {:.2} LUFS", target_lufs);
         normalizer::normalize_lufs(input, output, target_lufs, fade_in, fade_out, fade_curve)?;
-        info!("LUFS normalization completed: {} -> {} (target: {:.2} LUFS)", 
+        println!("LUFS normalization completed: {} -> {} (target: {:.2} LUFS)", 
               input.display(), output.display(), target_lufs);
     } else {
         debug!("Target peak level: {:.2} dB", max_peak);
         normalizer::normalize_peak(input, output, max_peak, fade_in, fade_out, fade_curve)?;
-        info!("Peak normalization completed: {} -> {} (target: {:.2} dB)", 
+        println!("Peak normalization completed: {} -> {} (target: {:.2} dB)", 
               input.display(), output.display(), max_peak);
     }
 
     if fade_in > 0.0 || fade_out > 0.0 {
-        info!("Applied fades: in={:.2}s, out={:.2}s, curve={}", fade_in, fade_out, fade_curve);
+        println!("Applied fades: in={:.2}s, out={:.2}s, curve={}", fade_in, fade_out, fade_curve);
     }
 
     Ok(())

@@ -1,9 +1,6 @@
-use anyhow::Result;
-use hound::{SampleFormat};
 use std::path::Path;
-
-use crate::audio_processor::{read_wav_as_f32, write_wav, get_lufs_level};
-use crate::multi_format_processor::{MultiFormatProcessor, AudioData};
+use anyhow::Result;
+use crate::multi_format_processor::MultiFormatProcessor;
 use crate::fade::{apply_fades, FadeCurve};
 
 fn linear_to_db(x: f32) -> f32 { if x <= 0.0 { f32::NEG_INFINITY } else { 20.0 * x.log10() } }
@@ -28,8 +25,8 @@ pub fn normalize_peak(input: &Path, output: &Path, target_peak_db: f64, fade_in:
     let curve = FadeCurve::from_str(curve);
     apply_fades(&mut audio_data.samples, audio_data.channels, audio_data.sample_rate, fade_in, fade_out, curve);
 
-    // Write output as WAV (default to 16-bit)
-    MultiFormatProcessor::write_wav_from_audio_data(output, &audio_data, 16)?;
+    // Write output in the format determined by file extension
+    MultiFormatProcessor::write_audio_data(output, &audio_data, 16)?;
     Ok(())
 }
 
@@ -48,8 +45,8 @@ pub fn normalize_lufs(input: &Path, output: &Path, target_lufs: f64, fade_in: f6
     let curve = FadeCurve::from_str(curve);
     apply_fades(&mut audio_data.samples, audio_data.channels, audio_data.sample_rate, fade_in, fade_out, curve);
 
-    // Write output as WAV (default to 16-bit)
-    MultiFormatProcessor::write_wav_from_audio_data(output, &audio_data, 16)?;
+    // Write output in the format determined by file extension
+    MultiFormatProcessor::write_audio_data(output, &audio_data, 16)?;
     Ok(())
 }
 

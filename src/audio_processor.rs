@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
 
+#[allow(dead_code)]
 pub fn get_peak_level(input: &Path) -> Result<f64> {
     let mut reader = WavReader::open(input)
         .map_err(|e| anyhow!("Failed to open input file: {}", e))?;
@@ -38,6 +39,7 @@ pub fn get_peak_level(input: &Path) -> Result<f64> {
     Ok(20.0 * (peak as f64).log10())
 }
 
+#[allow(dead_code)]
 pub fn get_lufs_level(input: &Path) -> Result<f64> {
     let mut reader = WavReader::open(input)?;
     let spec = reader.spec();
@@ -72,11 +74,34 @@ pub fn write_wav(output: &Path, spec: &WavSpec, data: &[f32]) -> Result<()> {
 
     match spec.sample_format {
         SampleFormat::Float => {
-            for v in data { writer.write_sample(*v)?; }
+            for v in data { 
+                let clamped = v.clamp(-1.0, 1.0);
+                writer.write_sample(clamped)?; 
+            }
         }
         SampleFormat::Int => {
-            let max = (1i64 << (spec.bits_per_sample - 1)) as f32;
-            for v in data { writer.write_sample((v.clamp(-1.0, 1.0) * max) as i32)?; }
+            // Calculate the proper scaling factor based on bit depth
+            let scale_factor = match spec.bits_per_sample {
+                8 => 127.0,
+                16 => 32767.0,
+                24 => 8388607.0,
+                32 => 2147483647.0,
+                _ => (1i64 << (spec.bits_per_sample - 1)) as f32 - 1.0,
+            };
+            
+            for v in data { 
+                let clamped = v.clamp(-1.0, 1.0);
+                let scaled = (clamped * scale_factor).round();
+                
+                // Write the sample with proper type based on bit depth
+                match spec.bits_per_sample {
+                    8 => writer.write_sample(scaled as i8)?,
+                    16 => writer.write_sample(scaled as i16)?,
+                    24 => writer.write_sample(scaled as i32)?, // hound handles 24-bit as i32
+                    32 => writer.write_sample(scaled as i32)?,
+                    _ => writer.write_sample(scaled as i32)?, // fallback
+                }
+            }
         }
     }
 
@@ -84,6 +109,7 @@ pub fn write_wav(output: &Path, spec: &WavSpec, data: &[f32]) -> Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn read_wav_as_f32(path: &Path) -> Result<(WavSpec, Vec<f32>)> {
     let mut reader = WavReader::open(path)?;
     let spec = reader.spec();
