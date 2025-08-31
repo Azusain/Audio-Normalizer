@@ -1,6 +1,7 @@
 mod audio_processor;
 mod fade;
 mod normalizer;
+mod multi_format_processor;
 
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
@@ -130,12 +131,12 @@ fn main() -> Result<()> {
     match cli.command {
         Some(Commands::Peak { input }) => {
             info!("Analyzing peak level of: {}", input.display());
-            let peak_db = audio_processor::get_peak_level(&input)?;
+            let peak_db = multi_format_processor::MultiFormatProcessor::get_peak_level(&input)?;
             info!("Peak level: {:.2} dB", peak_db);
         }
         Some(Commands::MeasureLufs { input }) => {
             info!("Analyzing LUFS level of: {}", input.display());
-            let lufs_level = audio_processor::get_lufs_level(&input)?;
+            let lufs_level = multi_format_processor::MultiFormatProcessor::get_lufs_level(&input)?;
             info!("LUFS level: {:.2} LUFS", lufs_level);
         }
         Some(Commands::Normalize(args)) => {
@@ -166,7 +167,7 @@ fn main() -> Result<()> {
                 (Some(input), None) => {
                     // Default to peak analysis
                     info!("Analyzing peak level of: {}", input.display());
-                    let peak_db = audio_processor::get_peak_level(&input)?;
+                    let peak_db = multi_format_processor::MultiFormatProcessor::get_peak_level(&input)?;
                     info!("Peak level: {:.2} dB", peak_db);
                 }
                 _ => {
