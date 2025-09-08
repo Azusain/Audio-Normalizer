@@ -59,6 +59,10 @@ struct Cli {
     /// Fade curve type (linear, exponential, logarithmic)
     #[arg(long = "fade-curve", default_value = "linear")]
     fade_curve: String,
+
+    /// Force clipping if necessary to reach target LUFS (default: auto-adjust to prevent clipping)
+    #[arg(long = "force-clip")]
+    force_clip: bool,
 }
 
 fn setup_logging(verbose: bool, quiet: bool) {
@@ -116,6 +120,7 @@ fn main() -> Result<()> {
                 cli.fade_in,
                 cli.fade_out,
                 &cli.fade_curve,
+                cli.force_clip,
             )?;
         }
         None => {
@@ -137,13 +142,14 @@ fn process_normalization(
     fade_in: f64,
     fade_out: f64,
     fade_curve: &str,
+    force_clip: bool,
 ) -> Result<()> {
     debug!("Input file: {}", input.display());
     debug!("Output file: {}", output.display());
 
     if let Some(target_lufs) = lufs {
         debug!("Target LUFS level: {:.2} LUFS", target_lufs);
-        normalizer::normalize_lufs(input, output, target_lufs, fade_in, fade_out, fade_curve)?;
+        normalizer::normalize_lufs(input, output, target_lufs, fade_in, fade_out, fade_curve, force_clip)?;
         println!("LUFS normalization completed: {} -> {} (target: {:.2} LUFS)", 
               input.display(), output.display(), target_lufs);
     } else {

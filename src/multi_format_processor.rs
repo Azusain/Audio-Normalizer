@@ -248,9 +248,17 @@ impl MultiFormatProcessor {
                     // End of stream
                     break;
                 }
-                Err(symphonia::core::errors::Error::DecodeError(_)) => {
-                    // Decode error, silently skip and continue - NO WARNING
-                    // This ensures every possible frame is preserved
+                Err(symphonia::core::errors::Error::DecodeError(err)) => {
+                    // Log decode error but continue processing to preserve maximum audio data
+                    warn!("decode error in packet (continuing): {}", err);
+                    // Try to insert silence for the expected frame duration to maintain timing
+                    if sample_rate > 0 && channels > 0 {
+                        // Estimate typical packet duration (conservative estimate: 1024 samples per channel)
+                        let estimated_samples_per_channel = 1024;
+                        for _ in 0..(estimated_samples_per_channel * channels) {
+                            samples.push(0.0); // Insert silence to maintain timing
+                        }
+                    }
                     continue;
                 }
                 Err(e) => {

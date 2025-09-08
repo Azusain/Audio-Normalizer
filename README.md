@@ -19,8 +19,11 @@ audio_normalizer input.wav output.wav
 # Peak normalization to -6 dB
 audio_normalizer -m -6 input.wav output.wav
 
-# LUFS normalization to -23 LUFS (broadcast standard)
+# LUFS normalization to -23 LUFS (broadcast standard) - automatically prevents clipping
 audio_normalizer -l -23 input.wav output.wav
+
+# Force clipping if necessary to reach exact target LUFS (not recommended)
+audio_normalizer -l -14 --force-clip input.wav output.wav
 
 # Apply fades (1s fade-in, 2s fade-out)
 audio_normalizer --fade-in 1.0 --fade-out 2.0 input.wav output.wav
@@ -42,6 +45,7 @@ audio_normalizer -v input.wav output.wav
 
 - `-m, --max-peak <dB>` - Target peak level (default: -12)
 - `-l, --lufs <LUFS>` - Target LUFS level for loudness normalization
+- `--force-clip` - Force clipping if necessary to reach target LUFS (default: auto-adjust to prevent clipping)
 - `--fade-in <seconds>` - Fade in duration in seconds (default: 0)
 - `--fade-out <seconds>` - Fade out duration in seconds (default: 0)
 - `--fade-curve <curve>` - Fade curve type: `linear`, `exponential`, `logarithmic` (default: `linear`)
@@ -53,6 +57,8 @@ audio_normalizer -v input.wav output.wav
 
 - Current implementation uses WAV I/O (via `hound`). If you need broad format support (FLAC/OGG/AIFF), we can integrate additional crates or an FFmpeg-based reader.
 - LUFS measurement is powered by the `ebur128` crate.
+- **Clipping Protection**: By default, LUFS normalization automatically prevents clipping by adjusting the target LUFS to the maximum safe level when necessary. Use `--force-clip` to override this safety feature.
+- **Error Recovery**: The decoder will attempt to recover from damaged audio frames by inserting silence to maintain timing, rather than skipping entire packets.
 
 ## License
 
